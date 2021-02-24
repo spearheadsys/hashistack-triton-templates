@@ -1,0 +1,83 @@
+---
+# nomad.yml
+- name: 'Provision Nomad'
+  hosts: default
+  become: true
+
+  tasks:
+    - name: Disable IPv6 with sysctl
+      sysctl: name={{ item }} value=1 state=present reload=yes
+      with_items:
+        - net.ipv6.conf.all.disable_ipv6
+        - net.ipv6.conf.default.disable_ipv6
+        - net.ipv6.conf.lo.disable_ipv6
+        
+    - name: refresh apt
+      command: apt update
+
+    - name: Install software (gnupg, apt=keys, etc.)
+      command: apt -y install software-properties-common gnupg keychain dnsutils
+    
+    - name: Add hashicorp apt key
+      shell:
+        cmd: curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+    
+    - name: Add hashicorp apt repository
+      shell:
+        cmd: echo "deb [arch=amd64] https://apt.releases.hashicorp.com buster main" >> /etc/apt/sources.list
+    
+    - name: Refresh apt
+      command: apt update
+    
+    - name: Install nomad 
+      command: apt -y install nomad consul
+    
+    # enable ssh-agent
+    - name: Copy ssh_config
+      template:
+        src: templates/ssh_config
+        dest: /root/.ssh/config
+
+    - name: Create target directory
+      file: path=/root/.config/systemd/user state=directory mode=0755
+
+    - name: Copy ssh-agent.service
+      template:
+        src: templates/ssh-agent.service
+        dest: /root/.config/systemd/user/ssh-agent.service
+    
+    - name: Add ssh_auth_socket to pam env
+      template:
+        src: templates/pam_env
+        dest: /root/.pam_environment
+
+    - name: Copy nomad server configuration file
+      template:
+        src: templates/nomad.hcl.j2
+        dest: /etc/nomad.d/nomad.hcl
+
+    - name: Copy my-nomad.service unit file
+      copy:
+        src: templates/my-nomad.service
+        dest: /etc/systemd/system/my-nomad.service
+
+    - name: Copy my-nomad.sh script file
+      copy:
+        src: templates/my-nomad.sh
+        dest: /usr/local/bin/my-nomad.sh
+        mode: '755'
+
+    - name: Enable & start ssh-agent service
+      service: 
+        name: ssh-agent
+        scope: user
+        enabled: yes
+
+    - name: Enable my-nomad service
+      service: 
+        name: my-nomad
+        enabled: yes
+      
+    - name: Linger root user
+      shell:
+        cmd: loginctl enable-linger root

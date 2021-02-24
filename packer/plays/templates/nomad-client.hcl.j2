@@ -1,0 +1,12 @@
+client {
+  enabled          = true
+  no_host_uuid     = true
+}
+
+consul {
+  address             = "127.0.0.1:8500"
+  client_service_name = "nomad-client"
+  client_auto_join    = true
+}
+
+retry_join = ["provider=triton account=xxx url=https://eu-ro-1.api.spearhead.cloud key_id=xx tag_key=nomad-client tag_value=yes"]

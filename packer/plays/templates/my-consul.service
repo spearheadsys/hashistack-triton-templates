@@ -1,0 +1,8 @@
+# /etc/systemd/system/my-consul.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/my-consul.sh
+
+[Install]
+WantedBy=multi-user.target

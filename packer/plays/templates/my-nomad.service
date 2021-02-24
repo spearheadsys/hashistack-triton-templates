@@ -1,0 +1,8 @@
+# /etc/systemd/system/my-nomad.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/my-nomad.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,87 @@
+---
+# consul.yml
+- name: 'Provision Consul'
+  hosts: default
+  become: true
+
+  # TODO: disable ipv6
+  tasks:
+    # - name: Disable IPv6 with sysctl
+    #   sysctl: name={{ item }} value=1 state=present reload=yes
+    #   with_items:
+    #     - net.ipv6.conf.all.disable_ipv6
+    #     - net.ipv6.conf.default.disable_ipv6
+    #     - net.ipv6.conf.lo.disable_ipv6
+    - name: refresh apt
+      command: apt update
+
+    - name: Install software (gnupg, apt=keys, etc.)
+      command: apt -y install software-properties-common gnupg keychain dnsutils
+    
+    - name: Add hasicorp apt key
+      shell:
+        cmd: curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+    
+    # b0rk3d with module apt_add_repository "deb [arch=amd64] https://apt.releases.hashicorp.com buster main"
+    - name: Add hashicorp apt repository
+      shell:
+        cmd: echo "deb [arch=amd64] https://apt.releases.hashicorp.com buster main" >> /etc/apt/sources.list
+    
+    - name: Refresh apt
+      command: apt update
+    
+    - name: Install consul 
+      command: apt -y install consul
+    
+    # enable ssh-agent
+    - name: Copy ssh_config
+      template:
+        src: templates/ssh_config
+        dest: /root/.ssh/config
+
+    - name: Create target directory
+      file: path=/root/.config/systemd/user state=directory mode=0755
+
+    - name: Copy ssh-agent.service
+      template:
+        src: templates/ssh-agent.service
+        dest: /root/.config/systemd/user/ssh-agent.service
+    
+    - name: Add ssh_auth_socket to pam env
+      template:
+        src: templates/pam_env
+        dest: /root/.pam_environment
+
+    - name: Copy consul server configuration file
+      template:
+        src: templates/consul.hcl.j2
+        dest: /etc/consul.d/consul.hcl
+
+    - name: Copy my-consul.service unit file
+      copy:
+        src: templates/my-consul.service
+        dest: /etc/systemd/system/my-consul.service
+
+    - name: Copy my-consul.sh script file
+      copy:
+        src: templates/my-consul.sh
+        dest: /usr/local/bin/my-consul.sh
+        mode: '755'
+
+    - name: Enable & start ssh-agent service
+      service: 
+        name: ssh-agent
+        scope: user
+        enabled: yes
+
+    - name: Enable my-consul service
+      service: 
+        name: my-consul
+        enabled: yes
+      
+    - name: Linger root user
+      shell:
+        cmd: loginctl enable-linger root
+
+# dig +short consul-server.svc.41824237-4616-42e3-d189-f9bd0242b4e4.ro-1.on.spearhead.cloud | awk '{print $4}' > /tmp/consul
+# for i in `cat /tmp/consul`; do echo $i; done

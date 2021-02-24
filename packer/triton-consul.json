@@ -1,0 +1,31 @@
+{
+  "builders": [
+    {
+      "type": "triton",
+      "triton_url": "https://eu-ro-1.api.spearhead.cloud",
+      "triton_account": "root",
+      "triton_key_id": "",
+      "triton_key_material": "/Users/xx/.ssh/id_rsa",
+
+      "source_machine_name": "packer-consul-server",
+      "source_machine_package": "af1bce69-09ed-6ba4-c3a6-d2f14a3ad493",
+      "source_machine_image": "9bcfe5cc-007d-4f23-bc8a-7e7b4d0c537e",
+
+      "ssh_username": "root",
+      "ssh_private_key_file": "/Users/xxx/.ssh/id_rsa",
+
+      "image_name": "packer-consul-server",
+      "image_version": "1.0.10"
+    }
+  ],
+  "provisioners": [
+	{
+	  "type": "shell",
+	  "script": "scripts/motd.sh"
+	},
+	{
+	  "type": "ansible",
+	  "playbook_file": "./plays/consul-server.yml"
+	}
+  ]
+}
